@@ -1,16 +1,9 @@
 package com.dev.task.taskcreator.controller;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import com.dev.task.taskcreator.model.Employee;
 import com.dev.task.taskcreator.model.Projects;
@@ -21,49 +14,71 @@ import com.dev.task.taskcreator.service.TaskService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import java.util.List;
+
 @RestController
 @CrossOrigin(origins = "http://localhost:3000")
 public class TaskController {
-	@Autowired
-	@Qualifier("projectService")
-	private ProjectService projectService;
-	@Autowired
-	@Qualifier("employeeService")
-	private EmployeeService employeeService;
-	@Autowired
-	@Qualifier("taskService")
-	private TaskService taskService;
 
+    @Autowired
+    @Qualifier("projectService")
+    private ProjectService projectService;
 
-	@GetMapping("project")
-	public List<Projects> getAllProjects() {
-		List<Projects> allTasks = new ArrayList<Projects>();
-		allTasks = projectService.fetchAllProjects();
-		return allTasks;
-	}
-	
-	@GetMapping("project/{projectId}/task")
-	public List<Tasks> viewTasks(@PathVariable("projectId") String projectId) {
-		List<Tasks> allTasks = new ArrayList<Tasks>();
-		allTasks = taskService.fetchTaskByProjects(projectId);
-		return allTasks;
-	}
+    @Autowired
+    @Qualifier("employeeService")
+    private EmployeeService employeeService;
 
-	@PostMapping("task/")
-	public void addTask(@RequestBody Tasks task) throws Exception {
-		taskService.assignTasks(task);
-	}
+    @Autowired
+    @Qualifier("taskService")
+    private TaskService taskService;
 
-	@GetMapping("project/{projectId}/employee/")
-	public String getAllEmployees(@PathVariable("projectId") String projectId) {
-		String value2 = "";
-		GsonBuilder gsonBuilder = new GsonBuilder();
-		gsonBuilder.setDateFormat("dd-MM-yyyy");
-		Gson gson = gsonBuilder.create();
+    private final Gson gson = new GsonBuilder().setDateFormat("dd-MM-yyyy").create();
 
-		List<Employee> val = employeeService.fetchEmployeeByProject(projectId);
-		value2 = gson.toJson(val);
+    /**
+     * Get all projects.
+     *
+     * @return List of projects
+     */
+    @GetMapping("/projects")
+    public ResponseEntity<List<Projects>> getAllProjects() {
+        List<Projects> projects = projectService.fetchAllProjects();
+        return ResponseEntity.ok(projects);
+    }
 
-		return value2;
-	}
+    /**
+     * Get tasks for a specific project.
+     *
+     * @param projectId ID of the project
+     * @return List of tasks for the project
+     */
+    @GetMapping("/projects/{projectId}/tasks")
+    public ResponseEntity<List<Tasks>> getTasksByProject(@PathVariable String projectId) {
+        List<Tasks> tasks = taskService.fetchTaskByProjects(projectId);
+        return ResponseEntity.ok(tasks);
+    }
+
+    /**
+     * Add a new task.
+     *
+     * @param task Task details
+     * @throws Exception if task cannot be assigned
+     */
+    @PostMapping("/tasks")
+    public ResponseEntity<Void> addTask(@RequestBody Tasks task) throws Exception {
+        taskService.assignTasks(task);
+        return ResponseEntity.status(201).build(); // HTTP 201 for successful creation
+    }
+
+    /**
+     * Get all employees assigned to a specific project.
+     *
+     * @param projectId ID of the project
+     * @return JSON array of employees
+     */
+    @GetMapping("/projects/{projectId}/employees")
+    public ResponseEntity<String> getEmployeesByProject(@PathVariable String projectId) {
+        List<Employee> employees = employeeService.fetchEmployeeByProject(projectId);
+        String employeesJson = gson.toJson(employees);
+        return ResponseEntity.ok(employeesJson);
+    }
 }
